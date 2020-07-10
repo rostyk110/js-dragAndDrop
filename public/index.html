@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>D&D</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://www.gstatic.com/firebasejs/7.16.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/7.16.0/firebase-storage.js"></script>
+</head>
+<body>
+<div id="drop-area">
+  <form class="my-form">
+    <p>Drag and drop files to upload ("jpg", "jpeg", "png", "gif", "pdf")</p>
+    <input type="file" id="fileElem" multiple accept=".jpg, .jpeg, .png, .gif, .pdf" onchange="handleFiles(this.files)">
+    <label class="button" for="fileElem">Select some files</label>
+    <div id="gallery"></div>
+    <progress id="progress-bar" max=100 value=0></progress>
+    <p id="p-info"></p>
+  </form>
+</div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyBVE8VznfOnOm8GVbI5UDtR3pVCF6cD-jU",
+    authDomain: "didi-48a3e.firebaseapp.com",
+    databaseURL: "https://didi-48a3e.firebaseio.com",
+    projectId: "didi-48a3e",
+    storageBucket: "didi-48a3e.appspot.com",
+    messagingSenderId: "856437840370",
+    appId: "1:856437840370:web:07853d8c0cabcdf6f5b36b"
+  };
+  firebase.initializeApp(firebaseConfig);
+</script>
+
+<script>
+  const dropArea = document.getElementById('drop-area')
+  const form = document.querySelector('.my-form')
+  const progressBar = document.getElementById('progress-bar')
+  const p2 = document.getElementById('p-info')
+  const types = ['image/jpg', 'image/jpeg', 'image/png', 'image/gif', 'application/pdf']
+  const pdfImageUrl = 'https://store-images.s-microsoft.com/image/apps.34961.13510798887621962.47b62c4c-a0c6-4e3c-87bb-509317d9c364.a6354b48-c68a-47fa-b69e-4cb592d42ffc'
+  let filesDone = 0
+  let filesToDo = 0
+
+  addListeners(document.body, ['dragenter', 'dragover', 'dragleave', 'drop'], preventDefaults)
+  addListeners(dropArea, ['dragenter', 'dragover', 'dragleave', 'drop'], preventDefaults)
+  addListeners(dropArea, ['dragenter', 'dragover'], () => dropArea.classList.add('highlight'))
+  addListeners(dropArea, ['dragleave', 'drop'], () => dropArea.classList.remove('highlight'))
+  addListeners(dropArea, ['drop'], e => handleFiles(e.dataTransfer.files))
+
+  function addListeners(node, listeners, func) {
+    listeners.forEach(eventName => {
+      node.addEventListener(eventName, func, false)
+    })
+  }
+
+  function preventDefaults(e) {
+    e.stopPropagation()
+    e.preventDefault()
+  }
+
+  function handleFiles(files) {
+    files = [...files]
+    initializeProgress(files.length)
+    files.forEach(uploadFile)
+  }
+
+  function initializeProgress(numfiles) {
+    progressBar.value = 0
+    filesDone = 0
+    filesToDo = numfiles
+  }
+
+  function progressDone() {
+    filesDone++
+    progressBar.value = filesDone / filesToDo * 100
+  }
+
+  function previewFile(file) {
+    let reader = new FileReader()
+    reader.readAsDataURL(file)
+
+    reader.onloadend = function() {
+      let img = document.createElement('img')
+      if (file.type === 'application/pdf') {
+        img.src = pdfImageUrl
+      } else {
+        img.src = reader.result
+      }
+      document.getElementById('gallery').appendChild(img)
+    }
+  }
+
+  function uploadFile(file) {
+    if (!types.includes(file.type)) {
+      const error = document.createElement('p')
+      error.textContent = `".${file.name.split('.')[1]}" is wrong type!`
+      error.style = "color: red; font-weight: 700;"
+      form.prepend(error)
+      setTimeout(() => error.textContent = '', 3000)
+      return
+    }
+
+    previewFile(file)
+
+    const storageRef = firebase.storage().ref();
+    const thisRef = storageRef.child('images/' + file.name);
+
+    p2.textContent = `${file.name} is uploading`
+
+    thisRef.put(file).then(() => {
+      console.log('Uploaded a blob or file!');
+      p2.textContent = `${file.name} is uploaded (${filesDone + 1}/${filesToDo})`
+      progressDone()
+    });
+  }
+</script>
+</body>
+</html>
